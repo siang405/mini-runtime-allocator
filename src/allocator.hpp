@@ -14,3 +14,11 @@ void initialize_memory();
 int allocate(size_t size);
 bool free_block(int id);
 void show_memory();
+enum AllocationStrategy {
+    FirstFit,
+    BestFit
+};
+
+extern AllocationStrategy current_strategy;
+void set_strategy(AllocationStrategy strategy);
+

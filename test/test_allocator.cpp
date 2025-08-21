@@ -31,3 +31,13 @@ TEST_CASE("Memory allocator basic operations", "[allocator]") {
         REQUIRE_FALSE(free_block(999)); // not exist
     }
 }
+TEST_CASE("Best-Fit Allocation", "[bestfit]") {
+    initialize_memory();
+    set_strategy(BestFit);
+    int id1 = allocate(10);
+    int id2 = allocate(20);
+    free_block(id1); // creates free block of size 10
+    int id3 = allocate(8); // should go into size 10 block
+    REQUIRE(id3 != -1);
+}
+

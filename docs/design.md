@@ -1,69 +1,109 @@
-# Mini Runtime Allocator - Design Notes
+# Design Document: Mini Runtime Allocator
 
 ## Overview
 
-This project implements a mini heap allocator simulator in C++, using a vector of `Block` structures to represent a contiguous region of memory.
+This project implements a simple dynamic memory allocator that simulates a heap with fixed-size memory (1024 bytes). It supports memory allocation and deallocation using different strategies.
 
-## Data Structures
+## Memory Model
 
-### `Block`
+- Simulated memory is represented by a `std::vector<Block>`.
+- Each `Block` stores:
+  - `start`: starting address (offset from 0)
+  - `size`: size of the block
+  - `used`: whether the block is in use
+  - `id`: a unique allocation ID (non-zero if used)
 
 ```cpp
 struct Block {
-    size_t start;    // Starting address
-    size_t size;     // Size of block
-    bool used;       // Usage flag
-    int id;          // Allocation ID (0 if free)
+    size_t start;
+    size_t size;
+    bool used;
+    int id;
 };
 ```
 
-### `memory`
+## Allocation Strategies
+
+### First-Fit (default)
+
+- Traverse memory from the beginning.
+- Allocate in the first block large enough to satisfy the request.
+- If the block is larger than requested, it is split into used and free parts.
+
+### Best-Fit (added in Phase 2)
+
+- Traverse the entire memory to find the smallest free block that can satisfy the request.
+- If found, allocate and split if necessary.
+- More efficient in terms of fragmentation than First-Fit, but slightly more expensive in time.
+
+### Strategy Selection
+
+A global variable `current_strategy` stores the selected allocation strategy.
 
 ```cpp
-std::vector<Block> memory;
+enum AllocationStrategy {
+    FirstFit,
+    BestFit
+};
+
+extern AllocationStrategy current_strategy;
+void set_strategy(AllocationStrategy strategy);
 ```
 
-This vector holds all current memory blocks (used or free). Initially it contains one big free block of size 1024.
+## Allocation Logic
 
-## Core Functions
+Shared logic:
+- Search for a suitable block based on the strategy.
+- If the block is larger than the requested size, split it.
+- Assign a unique allocation ID (`next_id++`).
 
-### `allocate(size_t size)`
+### First-Fit Logic (simplified):
 
-* Uses **First-Fit strategy**: traverses from left to right, picks the first block with enough space.
-* If a block is larger than needed, it is split into a used block and a remaining free block.
-* Returns a unique ID or -1 if allocation fails.
+```cpp
+for (block in memory)
+    if (block.free && block.size >= size)
+        split if necessary
+        mark used
+        return id
+```
 
-### `free_block(int id)`
+### Best-Fit Logic:
 
-* Marks the block as unused.
-* Merges with adjacent free blocks if possible.
+```cpp
+find block with smallest size ≥ requested size
+split if necessary
+mark used
+return id
+```
 
-### `show_memory()`
+## Deallocation Logic
 
-* Prints a formatted view of the memory layout.
+- Mark the block as free.
+- Try merging with adjacent free blocks (coalescing).
+- Keep memory as compact as possible.
 
-## CLI Interface
+## Example Allocation Flow
 
-The main program provides a command-line interface with commands:
+1. `alloc 200` → allocates [0–199]
+2. `alloc 300` → allocates [200–499]
+3. `free 1` → marks [0–199] as free
+4. `alloc 100` with Best-Fit → uses [0–199] because it's the smallest available block ≥ 100
 
-* `alloc <size>`: allocate a block
-* `free <id>`: deallocate by ID
-* `show`: print memory layout
-* `exit`: quit the program
+## Testing
 
-## Design Constraints
+- Unit tested with [Catch2](https://github.com/catchorg/Catch2)
+- Tests include:
+  - Allocating and freeing
+  - Strategy-specific behaviors
+  - Edge cases (allocation failure, invalid free)
 
-* No dynamic system memory is used; memory is simulated.
-* Fragmentation and coalescing are handled manually.
-* First-Fit is the only strategy implemented before commit `best-fit`.
+## Future Work
 
-## Next Steps
-
-* Introduce allocation strategy abstraction (enum switch)
-* Add `best-fit` selection logic
-* Separate logic into strategy-aware dispatcher
-* Optional: memory visualization / JSON log
+- Add fragmentation reporting
+- Interactive memory visualizer
+- Support for additional strategies (e.g., Worst-Fit, Buddy Allocation)
+- Memory compaction (defragmentation)
 
 ---
 
-This design is intentionally kept simple for educational and demonstrative purposes.
+Last Updated: 2025-08-22

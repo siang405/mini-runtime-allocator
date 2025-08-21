@@ -27,7 +27,16 @@ int main() {
                 cout << "Freed ID: " << id << "\n";
             else
                 cout << "Free failed\n";
-        } else if (command == "show") {
+        } else if (command == "strategy") {
+            string strat;
+            cin >> strat;
+            if (strat == "first")
+                set_strategy(FirstFit);
+            else if (strat == "best")
+                set_strategy(BestFit);
+            else
+                cout << "Unknown strategy\n";
+        }else if (command == "show") {
             show_memory();
         } else if (command == "exit") {
             break;

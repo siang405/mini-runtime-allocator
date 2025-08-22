@@ -34,6 +34,8 @@ int main() {
                 set_strategy(FirstFit);
             else if (strat == "best")
                 set_strategy(BestFit);
+            else if (strat == "worst")
+                set_strategy(WorstFit);
             else
                 cout << "Unknown strategy\n";
         }else if (command == "show") {

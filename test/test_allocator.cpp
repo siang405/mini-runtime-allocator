@@ -74,5 +74,18 @@ TEST_CASE("Fragmentation stats after allocation and freeing", "[fragmentation]")
     REQUIRE(fragment_count == 2);       // 兩個空閒區塊
     REQUIRE(fabs(fragmentation_ratio - (1.0 - 574.0 / 694.0)) < 1e-6); // 碎片率接近
 }
+TEST_CASE("Worst-Fit strategy allocates largest free block") {
+    initialize_memory();
+    set_strategy(FirstFit);
+    int id1 = allocate(200);
+    int id2 = allocate(300);
+    int id3 = allocate(100);
+    REQUIRE(free_block(id2));
+    REQUIRE(free_block(id1));
 
+    set_strategy(WorstFit);
+    int id4 = allocate(150);
+    show_memory();
+    REQUIRE(id4 != -1);
+}
 

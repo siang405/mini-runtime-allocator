@@ -37,6 +37,12 @@ struct Block {
 * If found, allocate and split if necessary.
 * More efficient in terms of fragmentation than First-Fit, but slightly more expensive in time.
 
+### Worst-Fit (added in Phase 3)
+
+* Traverse the entire memory to find the largest free block that can satisfy the request.
+* If found, allocate and split if necessary.
+* Often leaves large remaining free blocks, potentially fewer small fragments.
+
 ### Strategy Selection
 
 A global variable `current_strategy` stores the selected allocation strategy.
@@ -44,7 +50,8 @@ A global variable `current_strategy` stores the selected allocation strategy.
 ```cpp
 enum AllocationStrategy {
     FirstFit,
-    BestFit
+    BestFit,
+    WorstFit
 };
 
 extern AllocationStrategy current_strategy;
@@ -78,22 +85,20 @@ mark used
 return id
 ```
 
+### Worst-Fit Logic:
+
+```cpp
+find block with largest size ≥ requested size
+split if necessary
+mark used
+return id
+```
+
 ## Deallocation Logic
 
 * Mark the block as free.
 * Try merging with adjacent free blocks (coalescing).
 * Keep memory as compact as possible.
-
-## Fragmentation Analysis (added in Phase 3)
-
-The system supports fragmentation analysis via a `frag` CLI command. It prints:
-
-* **Total free space**
-* **Maximum available block**
-* **Number of fragments** (free blocks)
-* **External fragmentation rate** (e.g., `1 - (max_block / total_free)`)
-
-This provides visibility into how fragmented the memory has become.
 
 ## Example Allocation Flow
 
@@ -101,6 +106,8 @@ This provides visibility into how fragmented the memory has become.
 2. `alloc 300` → allocates \[200–499]
 3. `free 1` → marks \[0–199] as free
 4. `alloc 100` with Best-Fit → uses \[0–199] because it's the smallest available block ≥ 100
+5. `strategy worst`
+6. `alloc 100` with Worst-Fit → chooses the largest free block
 
 ## Testing
 
@@ -110,12 +117,13 @@ This provides visibility into how fragmented the memory has become.
   * Allocating and freeing
   * Strategy-specific behaviors
   * Edge cases (allocation failure, invalid free)
-  * Fragmentation analysis output
+  * Strategy switching
 
 ## Future Work
 
+* Add fragmentation reporting
 * Interactive memory visualizer
-* Support for additional strategies (e.g., Worst-Fit, Buddy Allocation)
+* Support for additional strategies (e.g., Buddy Allocation)
 * Memory compaction (defragmentation)
 
 ---

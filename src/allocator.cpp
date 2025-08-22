@@ -21,7 +21,7 @@ void initialize_memory() {
 }
 
 int allocate(size_t size) {
-    if(current_strategy == FirstFit){
+    if (current_strategy == FirstFit) {
         for (auto it = memory.begin(); it != memory.end(); ++it) {
             if (!it->used && it->size >= size) {
                 size_t leftover = it->size - size;
@@ -35,7 +35,7 @@ int allocate(size_t size) {
                 return id;
             }
         }
-    }else if(current_strategy == BestFit){
+    } else if (current_strategy == BestFit) {
         int best_index = -1;
         size_t best_size = SIZE_MAX;
         for (size_t i = 0; i < memory.size(); ++i) {
@@ -58,10 +58,34 @@ int allocate(size_t size) {
             block.id = next_id++;
             return block.id;
         }
+    } else if (current_strategy == WorstFit) {
+        int worst_index = -1;
+        size_t worst_size = 0;
+        for (size_t i = 0; i < memory.size(); ++i) {
+            auto& block = memory[i];
+            if (!block.used && block.size >= size) {
+                if (block.size > worst_size) {
+                    worst_size = block.size;
+                    worst_index = i;
+                }
+            }
+        }
+        if (worst_index != -1) {
+            auto& block = memory[worst_index];
+            if (block.size > size) {
+                memory.insert(memory.begin() + worst_index + 1,
+                    Block(block.start + size, block.size - size, false, 0));
+                block.size = size;
+            }
+            block.used = true;
+            block.id = next_id++;
+            return block.id;
+        }
     }
 
-    return -1; 
+    return -1;  // Allocation failed
 }
+
 
 
 bool free_block(int id) {

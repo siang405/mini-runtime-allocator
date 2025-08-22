@@ -17,7 +17,8 @@ void show_memory();
 void show_fragmentation_stats();
 enum AllocationStrategy {
     FirstFit,
-    BestFit
+    BestFit,
+    WorstFit
 };
 
 extern AllocationStrategy current_strategy;

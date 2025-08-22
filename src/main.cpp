@@ -42,7 +42,9 @@ int main() {
             break;
         } else if (command == "help") {
             cout << "Commands:\n  alloc <size>  - Allocate memory\n  free <id>     - Free block by ID\n  show          - Show memory layout\n  exit          - Quit\n";
-        } else {
+        } else if (command == "frag" || command == "stats") {
+            show_fragmentation_stats();
+        }else {
             cout << "Unknown command\n";
         }
     }

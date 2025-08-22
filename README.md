@@ -7,8 +7,9 @@ This is a simple memory allocator simulator written in C++. It mimics a heap all
 * Fixed-size memory (default: 1024 bytes)
 * First-Fit allocation strategy (default)
 * Best-Fit allocation strategy (new!)
+* Fragmentation statistics reporting (new!)
 * Command-line interface (CLI)
-* Supports `alloc`, `free`, `show`, and `exit` commands
+* Supports `alloc`, `free`, `show`, `strategy`, `frag`, and `exit` commands
 
 ## Usage
 
@@ -29,13 +30,14 @@ make
 
 ### CLI Commands
 
-| Command        | Description                   |
-| -------------- | ----------------------------- |
-| `alloc <size>` | Allocate memory block of size |
-| `free <id>`    | Free block by allocation ID   |
-| `show`         | Show current memory layout    |
-|`strategy <name>`| Switch strategy to first or best |
-| `exit`         | Exit the program              |
+| Command           | Description                          |
+| ----------------- | ------------------------------------ |
+| `alloc <size>`    | Allocate memory block of given size  |
+| `free <id>`       | Free the block by allocation ID      |
+| `show`            | Show current memory layout           |
+| `strategy <name>` | Switch strategy to `first` or `best` |
+| `frag`            | Show fragmentation statistics        |
+| `exit`            | Exit the program                     |
 
 ### Example
 
@@ -59,7 +61,11 @@ Allocated ID: 3
 [100 - 299] Free Size: 200  
 [300 - 499] Used (ID: 2) Size: 200  
 [500 - 1023] Free Size: 524  
-
+> frag
+Total free memory: 724 bytes
+Max free block: 524 bytes
+Fragment count: 2
+External fragmentation: 0.2762
 ```
 
 ## Testing
@@ -74,7 +80,7 @@ ctest --verbose
 
 * Add more allocation strategies (e.g. Worst-Fit, Buddy System)
 * Visual memory map output
-* Fragmentation analysis
+* Fragmentation analysis enhancements
 * Enhanced CLI experience
 
 ---

@@ -1,7 +1,8 @@
 #include "allocator.hpp"
 #include <iostream>
+using namespace std;
 
-std::vector<Block> memory;
+vector<Block> memory;
 const size_t MEMORY_SIZE = 1024;
 int next_id = 1;
 
@@ -89,11 +90,36 @@ bool free_block(int id) {
 
 
 void show_memory() {
-    std::cout << "\nMemory Layout:\n";
+    cout << "\nMemory Layout:\n";
     for (const auto& block : memory) {
-        std::cout << "[" << block.start << " - " << (block.start + block.size - 1)
+        cout << "[" << block.start << " - " << (block.start + block.size - 1)
                   << "] " << (block.used ? "Used" : "Free")
-                  << (block.used ? (" (ID: " + std::to_string(block.id) + ")") : "")
+                  << (block.used ? (" (ID: " + to_string(block.id) + ")") : "")
                   << " Size: " << block.size << "\n";
     }
+}
+
+void show_fragmentation_stats() {
+    size_t total_free = 0;
+    size_t largest_free_block = 0;
+    int fragment_count = 0;
+
+    for (const auto& block : memory) {
+        if (!block.used) {
+            total_free += block.size;
+            largest_free_block = max(largest_free_block, block.size);
+            fragment_count++;
+        }
+    }
+
+    double fragmentation = 0.0;
+    if (total_free > 0 && largest_free_block > 0 && fragment_count > 1) {
+        fragmentation = 1.0 - (double)largest_free_block / total_free;
+    }
+
+    cout << "\n[Fragmentation Stats]\n";
+    cout << "Total Free Memory     : " << total_free << " bytes\n";
+    cout << "Largest Free Block    : " << largest_free_block << " bytes\n";
+    cout << "Number of Fragments   : " << fragment_count << "\n";
+    cout << "External Fragmentation: " << fragmentation * 100 << "%\n";
 }

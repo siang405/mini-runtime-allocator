@@ -14,6 +14,7 @@ void initialize_memory();
 int allocate(size_t size);
 bool free_block(int id);
 void show_memory();
+void show_fragmentation_stats();
 enum AllocationStrategy {
     FirstFit,
     BestFit
@@ -21,4 +22,6 @@ enum AllocationStrategy {
 
 extern AllocationStrategy current_strategy;
 void set_strategy(AllocationStrategy strategy);
+extern std::vector<Block> memory;
+
 

@@ -4,6 +4,9 @@
 #include <cmath>
 using namespace std;
 
+//
+// Basic functionality tests
+//
 TEST_CASE("Memory allocator basic operations", "[allocator]") {
     initialize_memory();
 
@@ -30,24 +33,77 @@ TEST_CASE("Memory allocator basic operations", "[allocator]") {
     }
 
     SECTION("Free invalid ID") {
-        REQUIRE_FALSE(free_block(999)); // not exist
+        REQUIRE_FALSE(free_block(999)); // non-existent id
     }
 }
-TEST_CASE("Best-Fit Allocation", "[bestfit]") {
+
+//
+// BestFit test
+//
+TEST_CASE("BestFit correctly splits block", "[bestfit]") {
     initialize_memory();
     set_strategy(BestFit);
-    int id1 = allocate(10);
-    int id2 = allocate(20);
-    free_block(id1); // creates free block of size 10
-    int id3 = allocate(8); // should go into size 10 block
+
+    int id1 = allocate(200);   // [0-199] Used
+    int id2 = allocate(300);   // [200-499] Used
+    free_block(id1);           // [0-199] Free
+
+    int id3 = allocate(100);   // should fit into [0-199]
     REQUIRE(id3 != -1);
+
+    // Verify split result
+    REQUIRE(memory[0].used == true);    // [0-99] Used
+    REQUIRE(memory[0].size == 100);
+    REQUIRE(memory[1].used == false);   // [100-199] Free
+    REQUIRE(memory[1].size == 100);
 }
 
+//
+// WorstFit test
+//
+TEST_CASE("WorstFit chooses largest free block", "[worstfit]") {
+    initialize_memory();
+    int id1 = allocate(100);  // [0-99]
+    int id2 = allocate(200);  // [100-299]
+    int id3 = allocate(300);  // [300-599]
+
+    REQUIRE(free_block(id1)); // [0-99] Free
+    REQUIRE(free_block(id3)); // [300-599] Free
+
+    set_strategy(WorstFit);
+    int id4 = allocate(250);  // should fit into [300-599]
+    REQUIRE(id4 != -1);
+
+    REQUIRE(memory[2].used == true);    // [300-549] Used
+    REQUIRE(memory[2].size == 250);
+    REQUIRE(memory[3].used == false);   // [550-599] Free
+}
+
+//
+// Memory consistency check (sum must always equal MEMORY_SIZE)
+//
+TEST_CASE("Total memory always sums to MEMORY_SIZE", "[consistency]") {
+    initialize_memory();
+    set_strategy(FirstFit);
+
+    int a = allocate(123);
+    int b = allocate(456);
+    free_block(a);
+    int c = allocate(100);
+
+    size_t sum = 0;
+    for (const auto& block : memory) sum += block.size;
+    REQUIRE(sum == 1024);
+}
+
+//
+// Fragmentation test
+//
 TEST_CASE("Fragmentation stats after allocation and freeing", "[fragmentation]") {
     initialize_memory();
     set_strategy(FirstFit);
 
-    // 模擬碎片化情況
+    // Simulate fragmentation
     int id1 = allocate(100); // [0-99] Used
     int id2 = allocate(200); // [100-299] Used
     int id3 = allocate(150); // [300-449] Used
@@ -70,22 +126,37 @@ TEST_CASE("Fragmentation stats after allocation and freeing", "[fragmentation]")
     double fragmentation_ratio = 1.0 - (double)max_free_block / total_free;
 
     REQUIRE(total_free == 694);         // 120 + 574
-    REQUIRE(max_free_block == 574);     // 最大空閒區塊
-    REQUIRE(fragment_count == 2);       // 兩個空閒區塊
-    REQUIRE(fabs(fragmentation_ratio - (1.0 - 574.0 / 694.0)) < 1e-6); // 碎片率接近
+    REQUIRE(max_free_block == 574);     // largest free block
+    REQUIRE(fragment_count == 2);       // two free blocks
+    REQUIRE(fabs(fragmentation_ratio - (1.0 - 574.0 / 694.0)) < 1e-6);
 }
-TEST_CASE("Worst-Fit strategy allocates largest free block") {
+
+//
+// Fragmentation test under BestFit and WorstFit
+//
+TEST_CASE("Fragmentation under BestFit and WorstFit", "[fragmentation-strategy]") {
     initialize_memory();
-    set_strategy(FirstFit);
-    int id1 = allocate(200);
-    int id2 = allocate(300);
-    int id3 = allocate(100);
-    REQUIRE(free_block(id2));
-    REQUIRE(free_block(id1));
+    set_strategy(BestFit);
 
-    set_strategy(WorstFit);
-    int id4 = allocate(150);
-    show_memory();
-    REQUIRE(id4 != -1);
+    int id1 = allocate(100);
+    int id2 = allocate(200);
+    int id3 = allocate(150);
+    free_block(id2);
+    int id4 = allocate(50);
+    int id5 = allocate(30);
+
+    size_t total_free = 0;
+    size_t max_free_block = 0;
+    int fragment_count = 0;
+
+    for (const auto& block : memory) {
+        if (!block.used) {
+            total_free += block.size;
+            max_free_block = std::max(max_free_block, block.size);
+            fragment_count++;
+        }
+    }
+
+    REQUIRE(total_free + (100+50+30+150) <= 1024); // total check
+    REQUIRE(fragment_count >= 1); // at least one fragment
 }
-

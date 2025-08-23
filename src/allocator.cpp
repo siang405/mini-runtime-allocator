@@ -21,66 +21,51 @@ void initialize_memory() {
 }
 
 int allocate(size_t size) {
+    int target_index = -1;
+
     if (current_strategy == FirstFit) {
-        for (auto it = memory.begin(); it != memory.end(); ++it) {
-            if (!it->used && it->size >= size) {
-                size_t leftover = it->size - size;
-                int id = next_id++;
-                it->used = true;
-                it->size = size;
-                it->id = id;
-                if (leftover > 0) {
-                    memory.insert(it + 1, Block(it->start + size, leftover, false, 0));
-                }
-                return id;
+        for (size_t i = 0; i < memory.size(); ++i) {
+            if (!memory[i].used && memory[i].size >= size) {
+                target_index = i;
+                break;
             }
         }
     } else if (current_strategy == BestFit) {
-        int best_index = -1;
         size_t best_size = SIZE_MAX;
         for (size_t i = 0; i < memory.size(); ++i) {
-            auto& block = memory[i];
-            if (!block.used && block.size >= size) {
-                if (block.size < best_size) {
-                    best_size = block.size;
-                    best_index = i;
-                }
+            if (!memory[i].used && memory[i].size >= size && memory[i].size < best_size) {
+                best_size = memory[i].size;
+                target_index = i;
             }
-        }
-        if (best_index != -1) {
-            auto& block = memory[best_index];
-            if (block.size > size) {
-                memory.insert(memory.begin() + best_index + 1,
-                    Block(block.start + size, block.size - size, false, 0));
-                block.size = size;
-            }
-            block.used = true;
-            block.id = next_id++;
-            return block.id;
         }
     } else if (current_strategy == WorstFit) {
-        int worst_index = -1;
         size_t worst_size = 0;
         for (size_t i = 0; i < memory.size(); ++i) {
-            auto& block = memory[i];
-            if (!block.used && block.size >= size) {
-                if (block.size > worst_size) {
-                    worst_size = block.size;
-                    worst_index = i;
-                }
+            if (!memory[i].used && memory[i].size >= size && memory[i].size > worst_size) {
+                worst_size = memory[i].size;
+                target_index = i;
             }
         }
-        if (worst_index != -1) {
-            auto& block = memory[worst_index];
-            if (block.size > size) {
-                memory.insert(memory.begin() + worst_index + 1,
-                    Block(block.start + size, block.size - size, false, 0));
-                block.size = size;
-            }
-            block.used = true;
-            block.id = next_id++;
-            return block.id;
+    }
+
+    if (target_index != -1) {
+        size_t start = memory[target_index].start;
+        size_t old_size = memory[target_index].size;
+
+        int id = next_id++;
+
+        // 覆蓋原本的 block
+        memory[target_index].used = true;
+        memory[target_index].size = size;
+        memory[target_index].id = id;
+
+        size_t leftover = old_size - size;
+        if (leftover > 0) {
+            memory.insert(memory.begin() + target_index + 1,
+                          Block(start + size, leftover, false, 0));
         }
+
+        return id;
     }
 
     return -1;  // Allocation failed

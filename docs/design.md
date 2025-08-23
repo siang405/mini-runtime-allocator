@@ -31,17 +31,17 @@ struct Block {
 * Allocate in the first block large enough to satisfy the request.
 * If the block is larger than requested, it is split into used and free parts.
 
-### Best-Fit (added in Phase 2)
+### Best-Fit (Phase 2)
 
 * Traverse the entire memory to find the smallest free block that can satisfy the request.
 * If found, allocate and split if necessary.
-* More efficient in terms of fragmentation than First-Fit, but slightly more expensive in time.
+* Reduces external fragmentation compared to First-Fit, but requires a full scan.
 
-### Worst-Fit (added in Phase 3)
+### Worst-Fit (Phase 3)
 
 * Traverse the entire memory to find the largest free block that can satisfy the request.
 * If found, allocate and split if necessary.
-* Often leaves large remaining free blocks, potentially fewer small fragments.
+* Leaves larger free blocks, potentially reducing the number of unusable fragments.
 
 ### Strategy Selection
 
@@ -60,52 +60,50 @@ void set_strategy(AllocationStrategy strategy);
 
 ## Allocation Logic
 
-Shared logic:
+### Previous Design
 
-* Search for a suitable block based on the strategy.
-* If the block is larger than the requested size, split it.
-* Assign a unique allocation ID (`next_id++`).
+Originally, each strategy contained its own allocation logic. Both Best-Fit and Worst-Fit duplicated the splitting and marking logic from First-Fit.
+This led to inconsistencies: in particular, Best-Fit and Worst-Fit could produce **stale free blocks** due to reference invalidation after `std::vector::insert`.
 
-### First-Fit Logic (simplified):
+### Current Design (Refactored)
 
-```cpp
-for (block in memory)
-    if (block.free && block.size >= size)
-        split if necessary
-        mark used
-        return id
-```
+All strategies now share a **unified allocation routine**.
+The strategy is only responsible for choosing the target block index (`target_index`), while the split and update logic is centralized:
 
-### Best-Fit Logic:
+* Search for a suitable block based on the selected strategy.
+* Mark it as used, shrink it to requested size, assign allocation ID.
+* If there is leftover space, insert a new free block immediately after.
 
-```cpp
-find block with smallest size ≥ requested size
-split if necessary
-mark used
-return id
-```
+This guarantees consistent behavior across all strategies.
 
-### Worst-Fit Logic:
+### Pseudocode (Unified Logic)
 
 ```cpp
-find block with largest size ≥ requested size
-split if necessary
-mark used
-return id
+find target_index according to strategy
+
+if target_index != -1:
+    save start, old_size
+    mark block as used with requested size
+    assign id
+    if leftover > 0:
+        insert a new free block after target_index
+    return id
+
+return -1 // allocation failed
 ```
 
 ## Deallocation Logic
 
 * Mark the block as free.
-* Try merging with adjacent free blocks (coalescing).
-* Keep memory as compact as possible.
+* Merge with adjacent free blocks (coalescing).
+* Keeps memory layout compact and prevents fragmentation growth.
 
 ## Example Allocation Flow
 
 1. `alloc 200` → allocates \[0–199]
 2. `alloc 300` → allocates \[200–499]
 3. `free 1` → marks \[0–199] as free
-4. `alloc 100` with Best-Fit → uses \[0–199] because it's the smallest available block ≥ 100
+4. `alloc 100` with Best-Fit → uses \[0–199] because it’s the smallest available block ≥ 100
 5. `strategy worst`
 6. `alloc 100` with Worst-Fit → chooses the largest free block
 
@@ -114,18 +112,20 @@ return id
 * Unit tested with [Catch2](https://github.com/catchorg/Catch2)
 * Tests include:
 
-  * Allocating and freeing
+  * Basic allocation and deallocation
   * Strategy-specific behaviors
+  * Split correctness for Best-Fit and Worst-Fit
   * Edge cases (allocation failure, invalid free)
-  * Strategy switching
+  * Memory sum consistency (must always equal 1024)
+  * Fragmentation statistics under different strategies
 
 ## Future Work
 
-* Add fragmentation reporting
+* Add detailed fragmentation reporting
 * Interactive memory visualizer
-* Support for additional strategies (e.g., Buddy Allocation)
-* Memory compaction (defragmentation)
+* Support additional strategies (e.g., Buddy Allocation)
+* Implement memory compaction (defragmentation)
 
 ---
 
-Last Updated: 2025-08-22
+Last Updated: 2025-08-23 design

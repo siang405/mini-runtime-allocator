@@ -7,7 +7,8 @@ This is a simple memory allocator simulator written in C++. It mimics a heap all
 * Fixed-size memory (default: 1024 bytes)
 * First-Fit allocation strategy (default)
 * Best-Fit allocation strategy
-* Worst-Fit allocation strategy (new!)
+* Worst-Fit allocation strategy
+* Buddy System allocation strategy (new!)
 * Command-line interface (CLI)
 * Supports `alloc`, `free`, `show`, `strategy`, `stats`, and `exit` commands
 
@@ -30,14 +31,14 @@ make
 
 ### CLI Commands
 
-| Command           | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| `alloc <size>`    | Allocate memory block of given size            |
-| `free <id>`       | Free block by allocation ID                    |
-| `show`            | Show current memory layout                     |
-| `strategy <name>` | Switch strategy to `first`, `best`, or `worst` |
-| `stats`           | Show fragmentation statistics                  |
-| `exit`            | Exit the program                               |
+| Command           | Description                                             |
+| ----------------- | ------------------------------------------------------- |
+| `alloc <size>`    | Allocate memory block of given size                     |
+| `free <id>`       | Free block by allocation ID                             |
+| `show`            | Show current memory layout                              |
+| `strategy <name>` | Switch strategy to `first`, `best`, `worst`, or `buddy` |
+| `stats`           | Show fragmentation statistics                           |
+| `exit`            | Exit the program                                        |
 
 ### Example
 
@@ -78,10 +79,10 @@ ctest --verbose
 
 ## Future Extensions
 
-* Add more allocation strategies (e.g. Buddy System)
 * Visual memory map output
-* Fragmentation analysis
+* Extended fragmentation analysis
 * Enhanced CLI experience
+* Additional real-world allocation strategies (e.g., Slab Allocator)
 
 ---
 

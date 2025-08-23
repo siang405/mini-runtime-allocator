@@ -18,11 +18,14 @@ void show_fragmentation_stats();
 enum AllocationStrategy {
     FirstFit,
     BestFit,
-    WorstFit
+    WorstFit,
+    Buddy
 };
 
 extern AllocationStrategy current_strategy;
 void set_strategy(AllocationStrategy strategy);
 extern std::vector<Block> memory;
+extern const size_t MEMORY_SIZE;
+
 
 

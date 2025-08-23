@@ -10,6 +10,13 @@ Block::Block(size_t s, size_t sz, bool u, int i) : start(s), size(sz), used(u), 
 
 AllocationStrategy current_strategy = FirstFit;
 
+size_t next_power_of_two(size_t n) {
+    if (n == 0) return 1;
+    size_t power = 1;
+    while (power < n) power <<= 1;
+    return power;
+}
+
 void set_strategy(AllocationStrategy strategy) {
     current_strategy = strategy;
 }
@@ -46,15 +53,47 @@ int allocate(size_t size) {
                 target_index = i;
             }
         }
+    }else if (current_strategy == Buddy) {
+        size_t req_size = next_power_of_two(size);
+
+        // find the first free block big enough
+        for (size_t i = 0; i < memory.size(); ++i) {
+            if (!memory[i].used && memory[i].size >= req_size) {
+                target_index = i;
+                break;
+            }
+        }
+
+        if (target_index != -1) {
+            size_t start = memory[target_index].start;
+            size_t block_size = memory[target_index].size;
+
+            // recursively split until block_size == req_size
+            while (block_size > req_size) {
+                block_size /= 2;
+                // replace current block with first half
+                memory[target_index].size = block_size;
+                // insert second half after it
+                memory.insert(memory.begin() + target_index + 1,
+                              Block(start + block_size, block_size, false, 0));
+            }
+
+            int id = next_id++;
+            memory[target_index].used = true;
+            memory[target_index].id = id;
+            return id;
+        }
+
+        return -1; // no block found
     }
 
+    // existing unified logic for FirstFit/BestFit/WorstFit...
     if (target_index != -1) {
         size_t start = memory[target_index].start;
         size_t old_size = memory[target_index].size;
 
         int id = next_id++;
 
-        // 覆蓋原本的 block
         memory[target_index].used = true;
         memory[target_index].size = size;
         memory[target_index].id = id;
@@ -79,16 +118,55 @@ bool free_block(int id) {
             memory[i].used = false;
             memory[i].id = 0;
 
-            // Merge with next
-            if (i + 1 < memory.size() && !memory[i + 1].used) {
-                memory[i].size += memory[i + 1].size;
-                memory.erase(memory.begin() + i + 1);
-            }
+            if (current_strategy == Buddy) {
+                size_t block_size = memory[i].size;
+                size_t block_start = memory[i].start;
 
-            // Merge with previous
-            if (i > 0 && !memory[i - 1].used) {
-                memory[i - 1].size += memory[i].size;
-                memory.erase(memory.begin() + i);
+                bool merged = true;
+                while (merged) {
+                    merged = false;
+                    size_t buddy_start = block_start ^ block_size;
+
+                    // search for buddy
+                    for (size_t j = 0; j < memory.size(); ++j) {
+                        if (j == i) continue;
+                        if (!memory[j].used &&
+                            memory[j].size == block_size &&
+                            memory[j].start == buddy_start) {
+                            // merge
+                            size_t new_start = min(block_start, buddy_start);
+                            block_size *= 2;
+
+                            // erase the higher index first to keep `i` valid
+                            if (j > i) {
+                                memory.erase(memory.begin() + j);
+                                memory.erase(memory.begin() + i);
+                            } else {
+                                memory.erase(memory.begin() + i);
+                                memory.erase(memory.begin() + j);
+                                i = j; // adjust index
+                            }
+
+                            // insert merged block
+                            memory.insert(memory.begin() + i,
+                                Block(new_start, block_size, false, 0));
+
+                            block_start = new_start;
+                            merged = true;
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // normal merging
+                if (i + 1 < memory.size() && !memory[i + 1].used) {
+                    memory[i].size += memory[i + 1].size;
+                    memory.erase(memory.begin() + i + 1);
+                }
+                if (i > 0 && !memory[i - 1].used) {
+                    memory[i - 1].size += memory[i].size;
+                    memory.erase(memory.begin() + i);
+                }
             }
 
             return true;
@@ -96,6 +174,7 @@ bool free_block(int id) {
     }
     return false;
 }
+
 
 
 void show_memory() {

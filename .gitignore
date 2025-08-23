@@ -1,0 +1,26 @@
+# Build artifacts
+build/
+
+# VSCode settings
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+*.swp
+*.swo
+
+# Binaries
+*.exe
+*.out
+*.obj
+*.o
+*.a
+*.so
+*.dll
+*.lib
+
+# Logs
+*.log

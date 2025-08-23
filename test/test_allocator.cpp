@@ -160,3 +160,35 @@ TEST_CASE("Fragmentation under BestFit and WorstFit", "[fragmentation-strategy]"
     REQUIRE(total_free + (100+50+30+150) <= 1024); // total check
     REQUIRE(fragment_count >= 1); // at least one fragment
 }
+
+TEST_CASE("Buddy allocator split and allocate", "[buddy]") {
+    initialize_memory();
+    set_strategy(Buddy);
+
+    int id1 = allocate(100); // should allocate block of size 128
+    int id2 = allocate(200); // should allocate block of size 256
+
+    REQUIRE(id1 != -1);
+    REQUIRE(id2 != -1);
+
+    show_memory(); // should display properly split blocks
+}
+
+TEST_CASE("Buddy allocator split and merge", "[buddy]") {
+    initialize_memory();
+    set_strategy(Buddy);
+
+    int id1 = allocate(100); // gets 128
+    int id2 = allocate(200); // gets 256
+    REQUIRE(id1 != -1);
+    REQUIRE(id2 != -1);
+
+    REQUIRE(free_block(id1));
+    REQUIRE(free_block(id2));
+
+    // After both are freed, they should merge back into larger buddies
+    size_t total_size = 0;
+    for (auto& b : memory) total_size += b.size;
+    REQUIRE(total_size == MEMORY_SIZE);
+    REQUIRE(memory.size() == 1); // fully merged back
+}

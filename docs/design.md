@@ -69,54 +69,17 @@ void set_strategy(AllocationStrategy strategy);
 
 ## Allocation Logic
 
-### Previous Design
+### Unified Allocation (First/Best/Worst)
 
-Originally, each strategy contained its own allocation logic. Both Best-Fit and Worst-Fit duplicated the splitting and marking logic from First-Fit.
-This led to inconsistencies: in particular, Best-Fit and Worst-Fit could produce **stale free blocks** due to reference invalidation after `std::vector::insert`.
+* Strategies only select a target block index.
+* The core allocation logic handles marking used, splitting, and assigning IDs.
 
-### Current Design (Refactored)
+### Buddy Allocation
 
-All strategies now share a **unified allocation routine** for marking used blocks and splitting leftovers.
-The strategy is only responsible for choosing the target block index (`target_index`).
-
-The Buddy system is implemented separately because it enforces power-of-two block sizes and requires recursive splitting and merging.
-
-### Pseudocode (Unified Logic for First/Best/Worst)
-
-```cpp
-find target_index according to strategy
-
-if target_index != -1:
-    save start, old_size
-    mark block as used with requested size
-    assign id
-    if leftover > 0:
-        insert a new free block after target_index
-    return id
-
-return -1 // allocation failed
-```
-
-### Pseudocode (Buddy System)
-
-```cpp
-req_size = round_up_to_power_of_two(request)
-find a free block with size >= req_size
-while block.size > req_size:
-    split block into two buddies
-    keep one, mark the other as free
-mark final block as used, assign id
-return id
-```
-
-### Buddy Free (Merge)
-
-```cpp
-mark block as free
-while (buddy exists && buddy is free && buddy.size == block.size):
-    merge block with buddy
-    double block.size
-```
+* Rounds size to next power of two.
+* Recursively splits blocks until reaching the required size.
+* Marks block as used.
+* On free, merges buddies back together if both are free and equal size.
 
 ## Deallocation Logic
 
@@ -134,10 +97,35 @@ while (buddy exists && buddy is free && buddy.size == block.size):
 1. `alloc 200` → allocates \[0–199]
 2. `alloc 300` → allocates \[200–499]
 3. `free 1` → marks \[0–199] as free
-4. `alloc 100` with Best-Fit → uses \[0–199] because it’s the smallest available block ≥ 100
+4. `alloc 100` with Best-Fit → uses \[0–199]
 5. `strategy buddy`
-6. `alloc 100` with Buddy → rounds up to 128, allocates a 128-byte block
+6. `alloc 100` with Buddy → rounds to 128, allocates \[0–127]
 7. `free 2` → Buddy merge restores larger free blocks
+
+## Benchmarking (new)
+
+* Added a benchmarking framework that runs random allocation/free sequences.
+* Benchmarks all strategies (First-Fit, Best-Fit, Worst-Fit, Buddy).
+* Outputs CSV files (`benchmark_first.csv`, `benchmark_best.csv`, `benchmark_worst.csv`, `benchmark_buddy.csv`).
+* Each CSV contains:
+
+  * step, total\_free, max\_free, fragments, fragmentation\_ratio
+* Supports visualization with Python (`plot_benchmark.py`), comparing fragmentation ratio curves across strategies.
+* The Python script also computes **average fragmentation ratio** for each strategy and saves a summary plot (`benchmark_comparison.png`).
+
+## ASCII Visualization (new)
+
+* Added ASCII visualization of memory layout.
+* CLI command `visual` prints memory map:
+
+  * `#` = used block
+  * `.` = free block
+* Example:
+
+```
+[ASCII Memory Map]
+###....................
+```
 
 ## Testing
 
@@ -154,9 +142,9 @@ while (buddy exists && buddy is free && buddy.size == block.size):
 
 ## Future Work
 
-* Add detailed fragmentation reporting
-* Interactive memory visualizer
-* Support additional strategies (e.g., Slab Allocator)
+* Add internal fragmentation reporting
+* Interactive/graphical memory visualizer
+* Implement more advanced allocators (Slab, TLSF)
 * Implement memory compaction (defragmentation)
 
 ---

@@ -5,12 +5,16 @@ This is a simple memory allocator simulator written in C++. It mimics a heap all
 ## Features
 
 * Fixed-size memory (default: 1024 bytes)
-* First-Fit allocation strategy (default)
-* Best-Fit allocation strategy
-* Worst-Fit allocation strategy
-* Buddy System allocation strategy (new!)
+* Allocation strategies:
+
+  * First-Fit
+  * Best-Fit
+  * Worst-Fit
+  * Buddy System (power-of-two splitting & merging)
 * Command-line interface (CLI)
-* Supports `alloc`, `free`, `show`, `strategy`, `stats`, and `exit` commands
+* Supports `alloc`, `free`, `show`, `strategy`, `stats`, `visual`, `benchmark`, and `exit` commands
+* Benchmarking framework with CSV output for analysis
+* ASCII visualization of memory layout
 
 ## Usage
 
@@ -31,14 +35,16 @@ make
 
 ### CLI Commands
 
-| Command           | Description                                             |
-| ----------------- | ------------------------------------------------------- |
-| `alloc <size>`    | Allocate memory block of given size                     |
-| `free <id>`       | Free block by allocation ID                             |
-| `show`            | Show current memory layout                              |
-| `strategy <name>` | Switch strategy to `first`, `best`, `worst`, or `buddy` |
-| `stats`           | Show fragmentation statistics                           |
-| `exit`            | Exit the program                                        |
+| Command           | Description                                                 |
+| ----------------- | ----------------------------------------------------------- |
+| `alloc <size>`    | Allocate memory block of given size                         |
+| `free <id>`       | Free block by allocation ID                                 |
+| `show`            | Show current memory layout                                  |
+| `strategy <name>` | Switch strategy to `first`, `best`, `worst`, or `buddy`     |
+| `stats`           | Show fragmentation statistics                               |
+| `visual`          | Show ASCII visualization of memory (used = `#`, free = `.`) |
+| `benchmark`       | Run benchmark for all strategies, output CSV + summary      |
+| `exit`            | Exit the program                                            |
 
 ### Example
 
@@ -51,23 +57,35 @@ Allocated ID: 2
 [0 - 299] Used (ID: 1) Size: 300  
 [300 - 499] Used (ID: 2) Size: 200  
 [500 - 1023] Free Size: 524  
-> free 1
-Freed ID: 1
-> strategy best
-Switched to Best-Fit strategy
-> alloc 100
-Allocated ID: 3
-> strategy worst
-Switched to Worst-Fit strategy
-> alloc 50
-Allocated ID: 4
-> show
-[0 - 99] Used (ID: 3) Size: 100  
-[100 - 299] Free Size: 200  
-[300 - 499] Used (ID: 2) Size: 200  
-[500 - 549] Used (ID: 4) Size: 50  
-[550 - 1023] Free Size: 474  
+> visual
+[ASCII Memory Map]
+###.................................................
+> benchmark
+[Benchmark Finished] Strategy=first Ops=1000 Time=12 ms
+[Benchmark Finished] Strategy=best Ops=1000 Time=13 ms
+[Benchmark Finished] Strategy=worst Ops=1000 Time=12 ms
+[Benchmark Finished] Strategy=buddy Ops=1000 Time=9 ms
+Results saved to benchmark_first.csv, benchmark_best.csv, benchmark_worst.csv, benchmark_buddy.csv
 ```
+
+## Benchmark & Visualization
+
+* Benchmark generates CSV files for all strategies:
+
+  * `benchmark_first.csv`
+  * `benchmark_best.csv`
+  * `benchmark_worst.csv`
+  * `benchmark_buddy.csv`
+* Each CSV includes:
+
+  * step, total\_free, max\_free, fragments, fragmentation\_ratio
+* A Python script `plot_benchmark.py` is provided in the **project root** to compare fragmentation ratios:
+
+```bash
+python3 plot_benchmark.py
+```
+
+This generates `benchmark_comparison.png`, plotting fragmentation ratio vs operations for all strategies. It also prints average fragmentation ratio for each strategy in the console.
 
 ## Testing
 
@@ -79,10 +97,9 @@ ctest --verbose
 
 ## Future Extensions
 
-* Visual memory map output
-* Extended fragmentation analysis
-* Enhanced CLI experience
-* Additional real-world allocation strategies (e.g., Slab Allocator)
+* Extended fragmentation analysis (internal + external)
+* Advanced allocators (e.g., Slab Allocator, TLSF)
+* Interactive/graphical visualizer
 
 ---
 

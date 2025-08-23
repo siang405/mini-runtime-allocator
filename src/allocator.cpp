@@ -1,5 +1,8 @@
 #include "allocator.hpp"
 #include <iostream>
+#include <chrono>
+#include <fstream>
+
 using namespace std;
 
 vector<Block> memory;
@@ -210,4 +213,85 @@ void show_fragmentation_stats() {
     cout << "Largest Free Block    : " << largest_free_block << " bytes\n";
     cout << "Number of Fragments   : " << fragment_count << "\n";
     cout << "External Fragmentation: " << fragmentation * 100 << "%\n";
+}
+
+void show_memory_ascii(int width) {
+    cout << "\n[ASCII Memory Map]\n";
+    vector<char> canvas(width, '_');
+
+    for (const auto& block : memory) {
+        int start = (block.start * width) / MEMORY_SIZE;
+        int end = ((block.start + block.size) * width) / MEMORY_SIZE;
+        for (int i = start; i < end && i < width; i++) {
+            canvas[i] = block.used ? '#' : '.';
+        }
+    }
+
+    for (char c : canvas) cout << c;
+    cout << "\n";
+}
+
+void run_benchmarks(int ops, int max_alloc) {
+    std::vector<std::pair<AllocationStrategy, std::string>> strategies = {
+        {FirstFit, "first"},
+        {BestFit,  "best"},
+        {WorstFit, "worst"},
+        {Buddy,    "buddy"}
+    };
+
+    for (auto& [strat, name] : strategies) {
+        initialize_memory();
+        set_strategy(strat);
+
+        std::vector<int> allocated;
+        allocated.reserve(ops);
+
+        using namespace std::chrono;
+        auto start_time = high_resolution_clock::now();
+
+        std::ofstream log("benchmark_" + name + ".csv");
+        log << "step,total_free,max_free,fragments,fragmentation_ratio\n";
+
+        for (int i = 0; i < ops; i++) {
+            if ((rand() % 2 == 0) && !allocated.empty()) {
+                int idx = rand() % allocated.size();
+                int id = allocated[idx];
+                if (free_block(id)) {
+                    allocated.erase(allocated.begin() + idx);
+                }
+            } else {
+                int size = 1 + rand() % max_alloc;
+                int id = allocate(size);
+                if (id != -1) allocated.push_back(id);
+            }
+
+            if (i % 50 == 0) {
+                size_t total_free = 0;
+                size_t max_free = 0;
+                int fragments = 0;
+                for (const auto& b : memory) {
+                    if (!b.used) {
+                        total_free += b.size;
+                        max_free = std::max(max_free, b.size);
+                        fragments++;
+                    }
+                }
+                double frag_ratio = 0.0;
+                if (total_free > 0 && max_free > 0 && fragments > 1)
+                    frag_ratio = 1.0 - (double)max_free / total_free;
+
+                log << i << "," << total_free << "," << max_free << ","
+                    << fragments << "," << frag_ratio << "\n";
+            }
+        }
+
+        auto end_time = high_resolution_clock::now();
+        auto duration = duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+
+        log.close();
+        std::cout << "[Benchmark Finished] Strategy=" << name
+                  << " Ops=" << ops
+                  << " Time=" << duration << " ms\n"
+                  << "Results saved to benchmark_" << name << ".csv\n";
+    }
 }

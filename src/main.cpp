@@ -36,7 +36,7 @@ int main() {
                 set_strategy(BestFit);
             else if (strat == "worst")
                 set_strategy(WorstFit);
-            else if (strat == "Buddy")
+            else if (strat == "buddy")
                 set_strategy(Buddy);
             else
                 cout << "Unknown strategy\n";
@@ -48,6 +48,10 @@ int main() {
             cout << "Commands:\n  alloc <size>  - Allocate memory\n  free <id>     - Free block by ID\n  show          - Show memory layout\n  exit          - Quit\n";
         } else if (command == "frag" || command == "stats") {
             show_fragmentation_stats();
+        }else if (command == "visual") {
+            show_memory_ascii();
+        }else if (command == "benchmark") {
+            run_benchmarks(1000, 200);
         }else {
             cout << "Unknown command\n";
         }
